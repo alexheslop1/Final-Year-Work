@@ -1,0 +1,56 @@
+#define HistogramOverlay2_cxx
+#include "HistogramOverlay2.h"
+#include <TH2.h>
+#include <TStyle.h>
+#include <TCanvas.h>
+#include <iostream>
+void HistogramOverlay2::Loop()
+{
+  if (fChain == 0) return;
+  std::string branchName;
+  int numBranches;
+  TCanvas c;
+
+  std::cout << "Please enter the name of the branch to use:" << std::endl;
+  std::cin >> branchName;
+  std::cout << "Please enter the number of branches to use:" << std::endl;
+  std::cin >> numBranches;
+
+ for(int iBranch = 0; iBranch < numBranches; ++iBranch)
+    {
+      std::string varName(branchName+"_"+std::to_string(iBranch));
+      fChain->SetBranchStatus("*",0);
+      fChain->SetBranchStatus(varName.c_str(),1);
+      Double_t value;
+      fChain->SetBranchAddress(varName.c_str(),&value);
+      Long64_t nentries = fChain->GetEntriesFast();
+      TH1D variable(varName.c_str(), varName.c_str(), 100,0,10000);
+      variable.GetXaxis()->SetTitle("Delta Vertex #chi^{2}");
+      variable.GetYaxis()->SetTitle("Entries");
+
+      Long64_t nbytes = 0, nb = 0;
+  for (Long64_t jentry=0; jentry<nentries;jentry++) {
+    Long64_t ientry = LoadTree(jentry);
+    if (ientry < 0) break;
+    nb = fChain->GetEntry(jentry,0);   nbytes += nb;
+    // if (Cut(ientry) < 0) continue;
+    variable.Fill(value);
+  }
+  variable.Scale(1.0/variable.Integral());
+
+  variable.SetLineColor(iBranch+1);
+
+  if(iBranch == 0)
+    {
+      variable.Draw();
+    }
+
+  else
+    {
+      variable.Draw("SAME");
+    }
+    }
+
+  c.SaveAs("dvchi2combined.pdf");
+
+}
